@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="msr">
+<title>msr</title>
+<style>
+:root{--bg:#fff;--surf:#fff;--tx:#111;--mut:#8a8a8a;--ac:#111;--acx:#fff;--bd:#e6e6e6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--surf:#000;--tx:#f2f2f2;--mut:#8a8a8a;--ac:#f2f2f2;--acx:#000;--bd:#262626;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--surf:#000;--tx:#f2f2f2;--mut:#8a8a8a;--ac:#f2f2f2;--acx:#000;--bd:#262626;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.5rem;font-weight:600;margin:0 0 2px;letter-spacing:.04em}
+html{-webkit-tap-highlight-color:transparent}
+.sub{color:var(--mut);margin:0 0 18px;font-size:.92rem}
+button,.btn{font:inherit;border:0;border-radius:10px;padding:11px 16px;background:var(--ac);color:var(--acx);font-weight:600;cursor:pointer;display:inline-block}
+button.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px}
+.fold{border-radius:10px;overflow:hidden;cursor:pointer}
+.fold .cv{aspect-ratio:4/3;background:var(--bd) center/cover no-repeat;display:block;width:100%;object-fit:cover}
+.fold .in{padding:9px 11px}
+.fold b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fold span{color:var(--mut);font-size:.82rem}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:4px;margin-top:16px}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:pointer;background:var(--bd);border-radius:4px}
+.empty{margin-top:30px;padding:28px 18px;border:2px dashed var(--bd);border-radius:14px;text-align:center;color:var(--mut)}
+.msg{margin:12px 0;color:var(--mut);font-size:.92rem;min-height:1.4em}
+.top{display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:10px}
+.lg{width:36px;height:36px;border-radius:9px;display:block}
+.plus{width:44px;height:44px;border-radius:50%;padding:0;font-size:1.7rem;line-height:1}
+.menu{margin:8px 0 0 auto;width:220px;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.menu label,.menu .mi{position:relative;display:block;padding:14px 16px;border-bottom:1px solid var(--bd);cursor:pointer}
+.menu .mi:last-child{border:0}
+.pi{position:absolute;inset:0;opacity:0;width:100%;height:100%}
+.btn.big{width:100%;text-align:center;padding:18px;border-radius:14px;position:relative;overflow:hidden}
+#viewer{position:fixed;inset:0;background:#000;z-index:20;display:none}
+#viewer.on{display:block}
+#stage{position:absolute;inset:0;touch-action:none;user-select:none;-webkit-user-select:none}
+#pic{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+#pic.fill{object-fit:cover}
+#hud{position:absolute;top:18%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:8px 14px;border-radius:20px;font-size:.95rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3}
+#hud.on{opacity:1}
+#lock{position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--tx);display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px}
+#lock.on{display:flex}
+#ld{font-size:1.6rem;letter-spacing:.6em;padding-left:.6em}
+#kp{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+#kp button{height:72px;border-radius:50%;background:transparent;color:var(--tx);border:1px solid var(--bd);font-size:1.5rem;padding:0}
+#bar{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(10,13,16,.88);color:#e8edf2;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+#bar.off{display:none}
+#bar .row{justify-content:space-between}
+#bar button{background:#1f272e;color:#e8edf2;padding:9px 14px}
+#bar button.pl{background:#fff;color:#000}
+#bar select{background:#1f272e;color:#e8edf2;border:1px solid #33404a;border-radius:8px;padding:8px}
+#bar label{display:flex;gap:10px;align-items:center;font-size:.9rem}
+#bri{flex:1;accent-color:#fff}
+#cnt{font-size:.9rem;color:#aab4bd}
+</style>
+</head>
+<body>
+<main>
+  <div id="app"></div>
+</main>
+
+<div id="viewer" aria-modal="true" role="dialog">
+  <div id="stage"><img id="pic" alt=""></div><div id="hud"></div>
+  <div id="bar">
+    <label>Brightness <input id="bri" type="range" min="40" max="220" value="100"> <span id="briv">100%</span></label>
+    <div class="row">
+      <button id="prev" aria-label="Previous photo">Prev</button>
+      <span id="cnt"></span>
+      <button id="next" aria-label="Next photo">Next</button>
+    </div>
+    <div class="row">
+      <button id="play" class="pl">Start slideshow</button>
+      <select id="spd" aria-label="Seconds per photo"><option value="2">2 sec</option><option value="3" selected>3 sec</option><option value="5">5 sec</option><option value="8">8 sec</option></select>
+      <button id="fit">Fill</button><button id="close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="lock"><div id="lt">Enter PIN</div><div id="ld"></div><div id="kp"></div><button id="lc" class="ghost">Cancel</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var app=$('#app');
+var LOGO='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#111"/><path d="M120 190V120h70M322 120h70v70M392 322v70h-70M190 392h-70v-70" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><text x="256" y="300" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="150" fill="#fff" letter-spacing="4">msr</text></svg>';
+var LOGOURI='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(LOGO);
+var MIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',avif:'image/avif'};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+/* ---------- private storage (inside this app only, never in the phone gallery) ---------- */
+var dbp=new Promise(function(res,rej){
+  var r=indexedDB.open('photovault',1);
+  r.onupgradeneeded=function(){var d=r.result;d.createObjectStore('folders',{keyPath:'id',autoIncrement:true});d.createObjectStore('images',{keyPath:'id',autoIncrement:true}).createIndex('f','folderId')};
+  r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)};
+});
+function rq(r){return new Promise(function(a,b){r.onsuccess=function(){a(r.result)};r.onerror=function(){b(r.error)}})}
+function st(n,m){return dbp.then(function(d){return d.transaction(n,m||'readonly').objectStore(n)})}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+
+var urls=[];
+function mk(b){var u=URL.createObjectURL(b);urls.push(u);return u}
+function freeUrls(){urls.forEach(URL.revokeObjectURL.bind(URL));urls=[]}
+
+/* ---------- library ---------- */
+async function showLibrary(note){
+  freeUrls();
+  var folders=await rq((await st('folders')).getAll());
+  var html='<div class="top"><div class="brand"><img class="lg" src="'+LOGOURI+'" alt=""><h1>msr</h1></div><div class="row" style="gap:8px;flex-wrap:nowrap"><button id="shf" class="plus ghost" aria-label="Open a random folder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button><button id="plus" class="plus" aria-label="Add">+</button></div></div><p class="sub">Private. Not shown in your gallery.</p>'+
+    '<div id="menu" class="menu" hidden><label>ZIP files<input id="file" class="pi" type="file" multiple></label><label>Photos<input id="imgs" class="pi" type="file" accept="image/*" multiple></label><label>Folder<input id="dir" class="pi" type="file" webkitdirectory multiple></label><div class="mi" id="bkb">Back up all</div><label>Restore backup<input id="rst" class="pi" type="file"></label><div class="mi" id="lkb"></div></div><div class="msg" id="note">'+esc(note||'')+'</div>';
+  if(!folders.length){html+='<div class="empty">Tap + to add a ZIP, photos, or a whole folder.</div>'}
+  else{html+='<div class="grid">'+folders.map(function(f){return '<div class="fold" data-id="'+f.id+'" tabindex="0" role="button"><img class="cv" data-cv="'+f.id+'" alt=""><div class="in"><b>'+esc(f.name)+'</b><span>'+f.count+' photos</span></div></div>'}).join('')+'</div>'}
+  app.innerHTML=html;
+  $('#plus').onclick=function(){var m=$('#menu');m.hidden=!m.hidden};
+  $('#lkb').textContent='App lock: '+(pin?'On':'Off');$('#lkb').onclick=lockMenu;
+  $('#bkb').onclick=backup;$('#rst').onchange=restore;
+  $('#shf').onclick=function(){if(!folders.length){$('#note').textContent='Add a folder first.';return}showFolder(folders[Math.floor(Math.random()*folders.length)].id)};
+  $('#file').onchange=pick;$('#imgs').onchange=pickImgs;$('#dir').onchange=pickDir;
+  app.querySelectorAll('.fold').forEach(function(el){
+    var open=function(){showFolder(+el.dataset.id)};
+    el.onclick=open;el.onkeydown=function(e){if(e.key==='Enter')open()};
+  });
+  var s=await st('images');
+  for(var i=0;i<folders.length;i++){
+    var c=await rq(s.index('f').openCursor(IDBKeyRange.only(folders[i].id)));
+    var img=app.querySelector('[data-cv="'+folders[i].id+'"]');
+    if(c&&img)img.src=mk(c.value.blob);
+  }
+}
+
+/* ---------- import ---------- */
+async function pick(){
+  var files=Array.from(this.files);this.value='';
+  var note=$('#note'),ok=0,bad=[];
+  for(var i=0;i<files.length;i++){
+    if(note)note.textContent='Importing '+(i+1)+' of '+files.length+': '+files[i].name+'…';
+    try{await importZip(files[i]);ok++}catch(e){bad.push(files[i].name+' ('+e.message+')')}
+  }
+  showLibrary((ok?ok+' folder'+(ok>1?'s':'')+' saved. ':'')+(bad.length?'Could not import: '+bad.join(', '):''));
+}
+var NAT=function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'})};
+async function saveFiles(base,files){
+  files=files.filter(function(f){return /\.(jpe?g|png|gif|webp|bmp|avif|heic)$/i.test(f.name)||/^image\//.test(f.type)});
+  if(!files.length)throw new Error('no photos found');
+  files.sort(NAT);
+  var all=await rq((await st('folders')).getAll()),names=all.map(function(f){return f.name}),name=base,n=2;
+  while(names.indexOf(name)>-1)name=base+' ('+(n++)+')';
+  var fid=await rq((await st('folders','readwrite')).add({name:name,count:files.length,created:Date.now()}));
+  for(var i=0;i<files.length;i++){
+    var nt=$('#note');if(nt)nt.textContent='Saving '+name+': '+(i+1)+' / '+files.length;
+    await rq((await st('images','readwrite')).add({folderId:fid,name:files[i].name,blob:files[i]}));
+  }
+}
+async function kdf(pw,salt){var km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function encBlob(b,pw){var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));var key=await kdf(pw,salt);var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,await b.arrayBuffer());return new Blob([new TextEncoder().encode('MSRB'),salt,iv,ct],{type:'application/octet-stream'})}
+async function decBuf(buf,pw){var u=new Uint8Array(buf),key=await kdf(pw,u.slice(4,20));return crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(20,32)},key,u.slice(32))}
+async function backup(){
+  var note=$('#note');$('#menu').hidden=true;skipLock=Date.now()+120000;
+  var folders=await rq((await st('folders')).getAll());
+  if(!folders.length){note.textContent='Nothing to back up yet.';return}
+  var pw=prompt('Set a password to protect this backup. Remember it, it cannot be recovered. Leave empty for no password.');
+  if(pw===null)return;
+  if(pw&&!(window.crypto&&crypto.subtle)){note.textContent='Password protection needs a secure (https) page.';return}
+  var zip=new JSZip();
+  for(var k=0;k<folders.length;k++){
+    var f=folders[k];note.textContent='Packing '+f.name+'…';
+    var imgs=await rq((await st('images')).index('f').getAll(f.id));
+    var dir=zip.folder(f.name.replace(/[\\/]/g,'-'));
+    imgs.forEach(function(im,i){dir.file(String(i+1).padStart(5,'0')+'_'+im.name,im.blob)});
+  }
+  var blob=await zip.generateAsync({type:'blob',compression:'STORE'},function(m){note.textContent='Creating backup: '+Math.round(m.percent)+'%'});
+  if(pw){note.textContent='Encrypting…';blob=await encBlob(blob,pw)}
+  var nm='msr-backup-'+new Date().toISOString().slice(0,10)+(pw?'.msr':'.zip');
+  note.innerHTML='Backup ready. <button id="sv">Save or share</button>';
+  $('#sv').onclick=async function(){
+    var file=new File([blob],nm,{type:blob.type});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nm});return}}catch(e){if(e.name==='AbortError')return}
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove();
+  };
+}
+async function restore(){
+  var f=this.files[0];this.value='';if(!f)return;
+  var note=$('#note');$('#menu').hidden=true;note.textContent='Reading backup…';
+  var src=f;
+  try{
+    var head=new Uint8Array(await f.slice(0,4).arrayBuffer());
+    if(String.fromCharCode.apply(null,head)==='MSRB'){
+      var pw=prompt('Backup password');if(pw===null){note.textContent='';return}
+      if(!(window.crypto&&crypto.subtle)){note.textContent='Opening a protected backup needs a secure (https) page.';return}
+      note.textContent='Decrypting…';src=await decBuf(await f.arrayBuffer(),pw);
+    }
+  }catch(e){note.textContent='Wrong password or damaged file.';return}
+  var zip;try{zip=await JSZip.loadAsync(src)}catch(e){note.textContent='That is not a valid backup file.';return}
+  var g={};
+  Object.values(zip.files).forEach(function(e){
+    if(e.dir||!/\.(jpe?g|png|gif|webp|bmp|avif|heic)$/i.test(e.name))return;
+    var p=e.name.split('/');if(p.length<2)return;(g[p[0]]=g[p[0]]||[]).push(e);
+  });
+  var keys=Object.keys(g);if(!keys.length){note.textContent='No folders found in that file.';return}
+  for(var k=0;k<keys.length;k++){
+    var files=[];
+    for(var j=0;j<g[keys[k]].length;j++){
+      var e=g[keys[k]][j],ext=e.name.split('.').pop().toLowerCase();
+      note.textContent='Restoring '+keys[k]+': '+(j+1)+' / '+g[keys[k]].length;
+      files.push(new File([await e.async('arraybuffer')],e.name.split('/').pop(),{type:MIME[ext]||'image/jpeg'}));
+    }
+    try{await saveFiles(keys[k],files)}catch(er){}
+  }
+  showLibrary(keys.length+' folder'+(keys.length>1?'s':'')+' restored.');
+}
+async function pickImgs(){
+  var fs=Array.from(this.files);this.value='';if(!fs.length)return;
+  var n=prompt('Folder name','Photos');if(!n)return;
+  try{await saveFiles(n.trim()||'Photos',fs);showLibrary('Folder saved.')}catch(e){showLibrary('Could not add: '+e.message)}
+}
+async function pickDir(){
+  var fs=Array.from(this.files);this.value='';var g={},ok=0,bad=[];
+  fs.forEach(function(f){var p=(f.webkitRelativePath||'').split('/'),k=p.length>1?p[0]:'Folder';(g[k]=g[k]||[]).push(f)});
+  for(var k in g){try{await saveFiles(k,g[k]);ok++}catch(e){bad.push(k)}}
+  showLibrary(ok?ok+' folder'+(ok>1?'s':'')+' saved.':'No photos found in that folder.')
+}
+async function importZip(file){
+  if(!window.JSZip)throw new Error('ZIP tool did not load, check your connection');
+  var zip;try{zip=await JSZip.loadAsync(file)}catch(e){throw new Error('not a valid ZIP')}
+  var ents=Object.values(zip.files).filter(function(f){return !f.dir&&/\.(jpe?g|png|gif|webp|bmp|avif)$/i.test(f.name)&&!/__MACOSX|(^|\/)\./.test(f.name)});
+  if(!ents.length)throw new Error('no photos found');
+  ents.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'})});
+  var base=file.name.replace(/\.zip$/i,'').trim()||'Folder';
+  var all=await rq((await st('folders')).getAll());
+  var names=all.map(function(f){return f.name}),name=base,n=2;
+  while(names.indexOf(name)>-1)name=base+' ('+(n++)+')';
+  var fid=await rq((await st('folders','readwrite')).add({name:name,count:ents.length,created:Date.now()}));
+  for(var i=0;i<ents.length;i++){
+    var nt=$('#note');if(nt)nt.textContent='Saving '+name+': '+(i+1)+' / '+ents.length;
+    var ext=ents[i].name.split('.').pop().toLowerCase();
+    var buf=await ents[i].async('arraybuffer');
+    var s=await st('images','readwrite');
+    await rq(s.add({folderId:fid,name:ents[i].name.split('/').pop(),blob:new Blob([buf],{type:MIME[ext]||'image/jpeg'})}));
+  }
+}
+
+/* ---------- folder ---------- */
+var cur={imgs:[],i:0};
+async function showFolder(id){
+  freeUrls();
+  var f=await rq((await st('folders')).get(id));
+  var imgs=await rq((await st('images')).index('f').getAll(id));
+  cur.imgs=imgs.map(function(x){return mk(x.blob)});
+  app.innerHTML='<div class="row"><button class="ghost" id="back">Back</button><button class="ghost" id="del">Delete folder</button></div>'+
+    '<h1 style="margin-top:16px">'+esc(f.name)+'</h1><p class="sub">'+imgs.length+' photos, in order</p>'+
+    '<div class="row"><button id="ss">Start slideshow</button></div>'+
+    '<div class="thumbs">'+cur.imgs.map(function(u,i){return '<img loading="lazy" decoding="async" data-i="'+i+'" src="'+u+'" alt="Photo '+(i+1)+'">'}).join('')+'</div>';
+  $('#back').onclick=function(){showLibrary()};
+  $('#del').onclick=async function(){
+    if(!confirm('Delete “'+f.name+'” and its '+imgs.length+' photos from this app?'))return;
+    var d=await dbp,t=d.transaction(['folders','images'],'readwrite'),is=t.objectStore('images');
+    var keys=await rq(is.index('f').getAllKeys(id));
+    keys.forEach(function(k){is.delete(k)});t.objectStore('folders').delete(id);
+    await new Promise(function(r){t.oncomplete=r});showLibrary('Folder deleted.');
+  };
+  $('#ss').onclick=function(){openViewer(0,true)};
+  app.querySelectorAll('.thumbs img').forEach(function(im){im.onclick=function(){openViewer(+im.dataset.i,false)}});
+}
+
+/* ---------- viewer: brightness + slideshow ---------- */
+var pic=$('#pic'),bri=$('#bri'),timer=null,playBtn=$('#play');
+try{var sv=localStorage.getItem('pv_bri');if(sv)bri.value=sv}catch(e){}
+function applyBri(){pic.style.filter='brightness('+bri.value/100+')';$('#briv').textContent=bri.value+'%';try{localStorage.setItem('pv_bri',bri.value)}catch(e){}}
+bri.oninput=applyBri;
+function show(){pic.src=cur.imgs[cur.i];$('#cnt').textContent=(cur.i+1)+' / '+cur.imgs.length;applyBri()}
+function go(d){var n=cur.imgs.length;cur.i=(cur.i+d+n)%n;show()}
+function stop(){clearInterval(timer);timer=null;playBtn.textContent='Start slideshow'}
+function play(){stop();timer=setInterval(function(){go(1)},+$('#spd').value*1000);playBtn.textContent='Pause slideshow'}
+function openViewer(i,auto){cur.i=i;var v=$('#viewer');v.classList.add('on');$('#bar').classList.add('off');show();
+  try{var rf=v.requestFullscreen||v.webkitRequestFullscreen;if(rf){var p=rf.call(v);if(p&&p.catch)p.catch(function(){})}}catch(e){}
+  if(auto)play()}
+function closeViewer(){stop();$('#viewer').classList.remove('on');try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+$('#prev').onclick=function(){go(-1)};
+$('#next').onclick=function(){go(1)};
+$('#close').onclick=closeViewer;
+$('#fit').onclick=function(){var f=pic.classList.toggle('fill');this.textContent=f?'Fit':'Fill'};
+playBtn.onclick=function(){timer?stop():play()};
+$('#spd').onchange=function(){if(timer)play()};
+function tapAt(x){var w=innerWidth;if(x<w*.3){go(-1);if(timer)play()}else if(x>w*.7){go(1);if(timer)play()}else $('#bar').classList.toggle('off')}
+$('#stage').onclick=function(e){tapAt(e.clientX)};
+var t0=null,hudT;
+function hud(t){var h=$('#hud');h.textContent=t;h.classList.add('on');clearTimeout(hudT);hudT=setTimeout(function(){h.classList.remove('on')},900)}
+$('#stage').addEventListener('touchstart',function(e){var t=e.touches[0];t0={x:t.clientX,y:t.clientY,b:+bri.value,m:0}},{passive:true});
+$('#stage').addEventListener('touchmove',function(e){if(!t0)return;var t=e.touches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y;
+  if(!t0.m&&Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx))t0.m=1;
+  if(t0.m===1){bri.value=Math.max(40,Math.min(220,Math.round(t0.b-dy/innerHeight*200)));applyBri();hud('Brightness '+bri.value+'%')}},{passive:true});
+$('#stage').addEventListener('touchend',function(e){if(!t0)return;var t=e.changedTouches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y,m=t0.m;t0=null;e.preventDefault();
+  if(m===1)return;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)){go(dx<0?1:-1);if(timer)play()}
+  else if(Math.abs(dx)<12&&Math.abs(dy)<12)tapAt(t.clientX)});
+document.addEventListener('keydown',function(e){
+  if(!$('#viewer').classList.contains('on'))return;
+  if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);else if(e.key==='Escape')closeViewer();
+});
+
+/* ---------- app lock ---------- */
+var pin=null;try{pin=localStorage.getItem('msr_pin')}catch(e){}
+var lk=$('#lock'),lbuf='',lcb=null,skipLock=0;
+async function hp(p){try{var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('msr'+p));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}catch(e){var h=5381;for(var i=0;i<p.length;i++)h=(h*33+p.charCodeAt(i))|0;return 'x'+h}}
+function dots(){$('#ld').textContent='●'.repeat(lbuf.length)+'○'.repeat(4-lbuf.length)}
+function askPin(title,cb,cancel){lbuf='';lcb=cb;$('#lt').textContent=title;$('#lc').style.visibility=cancel?'visible':'hidden';lk.classList.add('on');dots()}
+async function key(k){
+  if(k==='x')lbuf=lbuf.slice(0,-1);else if(k&&lbuf.length<4)lbuf+=k;
+  dots();if(lbuf.length<4)return;
+  var p=lbuf;lbuf='';lk.classList.remove('on');
+  var r=await lcb(p);
+  if(r===false||typeof r==='string'){lk.classList.add('on');$('#lt').textContent=typeof r==='string'?r:'Wrong PIN';dots()}
+}
+var kp=$('#kp');['1','2','3','4','5','6','7','8','9','','0','x'].forEach(function(k){var b=document.createElement('button');b.textContent=k==='x'?'⌫':k;if(!k)b.style.visibility='hidden';b.onclick=function(){key(k)};kp.appendChild(b)});
+$('#lc').onclick=function(){lk.classList.remove('on')};
+var fails=0,until=0;
+function lockNow(){if(pin)askPin('Enter PIN',async function(p){
+  if(Date.now()<until)return 'Too many tries. Wait '+Math.ceil((until-Date.now())/1000)+' sec';
+  if((await hp(p))===pin){fails=0;return true}
+  fails++;if(fails%5===0)until=Date.now()+60000*(fails/5);
+  return false},false)}
+function lockMenu(){
+  var lab=$('#lkb');
+  if(pin){askPin('Enter PIN to turn off',async function(p){if((await hp(p))!==pin)return false;pin=null;try{localStorage.removeItem('msr_pin')}catch(e){}lab.textContent='App lock: Off'},true);return}
+  askPin('Choose a 4-digit PIN',function(a){askPin('Repeat the PIN',async function(b){if(a!==b)return 'PINs differ, try again';pin=await hp(a);try{localStorage.setItem('msr_pin',pin)}catch(e){}lab.textContent='App lock: On'},true)},true);
+}
+document.addEventListener('click',function(e){if(e.target&&e.target.type==='file')skipLock=Date.now()+120000},true);
+document.addEventListener('visibilitychange',function(){if(document.hidden&&pin&&Date.now()>skipLock){closeViewer();lockNow()}});
+lockNow();
+var im=new Image();
+im.onload=function(){
+  var c=document.createElement('canvas');c.width=c.height=512;c.getContext('2d').drawImage(im,0,0,512,512);
+  var png=c.toDataURL('image/png');
+  ['icon','apple-touch-icon'].forEach(function(r){var l=document.createElement('link');l.rel=r;l.href=png;document.head.appendChild(l)});
+  try{
+    var m={name:'msr',short_name:'msr',display:'standalone',background_color:'#000000',theme_color:'#000000',start_url:location.href,icons:[{src:png,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+    var ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));document.head.appendChild(ml);
+  }catch(e){}
+};
+im.src=LOGOURI;
+showLibrary();
+})();
+</script>
+</body>
+</html>
