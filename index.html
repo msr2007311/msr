@@ -3,64 +3,69 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#15171e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="msr">
 <title>msr</title>
 <style>
-:root{--bg:#fff;--surf:#fff;--tx:#111;--mut:#8a8a8a;--ac:#111;--acx:#fff;--bd:#e6e6e6;
+:root{--bg:#f4f2ee;--surf:#fbfaf7;--tx:#2a2c35;--mut:#7d808c;--ac:#6b78d6;--acx:#fff;--bd:#e5e2db;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--surf:#000;--tx:#f2f2f2;--mut:#8a8a8a;--ac:#f2f2f2;--acx:#000;--bd:#262626;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#000;--surf:#000;--tx:#f2f2f2;--mut:#8a8a8a;--ac:#f2f2f2;--acx:#000;--bd:#262626;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171e;--surf:#1e212b;--tx:#e3e5ee;--mut:#8b90a3;--ac:#a9b8ff;--acx:#15171e;--bd:#2c3040;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171e;--surf:#1e212b;--tx:#e3e5ee;--mut:#8b90a3;--ac:#a9b8ff;--acx:#15171e;--bd:#2c3040;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif}
 main{max-width:760px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:1.5rem;font-weight:600;margin:0 0 2px;letter-spacing:.04em}
 html{-webkit-tap-highlight-color:transparent}
 .sub{color:var(--mut);margin:0 0 18px;font-size:.92rem}
-button,.btn{font:inherit;border:0;border-radius:10px;padding:11px 16px;background:var(--ac);color:var(--acx);font-weight:600;cursor:pointer;display:inline-block}
+button,.btn{font:inherit;border:0;border-radius:14px;padding:11px 18px;background:var(--ac);color:var(--acx);font-weight:600;cursor:pointer;display:inline-block}
 button.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px}
-.fold{border-radius:10px;overflow:hidden;cursor:pointer}
+.fold{background:var(--surf);border:1px solid var(--bd);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.12)}
 .fold .cv{aspect-ratio:4/3;background:var(--bd) center/cover no-repeat;display:block;width:100%;object-fit:cover}
 .fold .in{padding:9px 11px}
 .fold b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fold span{color:var(--mut);font-size:.82rem}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:4px;margin-top:16px}
-.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:pointer;background:var(--bd);border-radius:4px}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:pointer;background:var(--bd);border-radius:10px}
 .empty{margin-top:30px;padding:28px 18px;border:2px dashed var(--bd);border-radius:14px;text-align:center;color:var(--mut)}
 .msg{margin:12px 0;color:var(--mut);font-size:.92rem;min-height:1.4em}
 .top{display:flex;justify-content:space-between;align-items:center}
 .brand{display:flex;align-items:center;gap:10px}
 .lg{width:36px;height:36px;border-radius:9px;display:block}
 .plus{width:44px;height:44px;border-radius:50%;padding:0;font-size:1.7rem;line-height:1}
-.menu{margin:8px 0 0 auto;width:220px;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.menu{margin:8px 0 0 auto;width:220px;border:1px solid var(--bd);border-radius:16px;overflow:hidden;background:var(--surf);box-shadow:0 10px 28px rgba(0,0,0,.25)}
 .menu label,.menu .mi{position:relative;display:block;padding:14px 16px;border-bottom:1px solid var(--bd);cursor:pointer}
 .menu .mi:last-child{border:0}
 .pi{position:absolute;inset:0;opacity:0;width:100%;height:100%}
 .btn.big{width:100%;text-align:center;padding:18px;border-radius:14px;position:relative;overflow:hidden}
-#viewer{position:fixed;inset:0;background:#000;z-index:20;display:none}
+#viewer{position:fixed;inset:0;background:#0a0b0f;z-index:20;display:none}
 #viewer.on{display:block}
 #stage{position:absolute;inset:0;touch-action:none;user-select:none;-webkit-user-select:none}
 #pic{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
 #pic.fill{object-fit:cover}
 #hud{position:absolute;top:18%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:8px 14px;border-radius:20px;font-size:.95rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3}
 #hud.on{opacity:1}
+#acct{position:fixed;inset:0;z-index:40;background:var(--bg);color:var(--tx);display:none;overflow:auto;padding:24px 20px}
+#acct.on{display:block}
+#acct .ab{max-width:420px;margin:0 auto}
+#acct input{width:100%;padding:13px 14px;margin:6px 0;border-radius:14px;border:1px solid var(--bd);background:var(--surf);color:var(--tx);font:inherit}
+#acct .col{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--tx);display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px}
 #lock.on{display:flex}
 #ld{font-size:1.6rem;letter-spacing:.6em;padding-left:.6em}
 #kp{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
 #kp button{height:72px;border-radius:50%;background:transparent;color:var(--tx);border:1px solid var(--bd);font-size:1.5rem;padding:0}
-#bar{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(10,13,16,.88);color:#e8edf2;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+#bar{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(26,28,38,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#e3e5ee;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
 #bar.off{display:none}
 #bar .row{justify-content:space-between}
-#bar button{background:#1f272e;color:#e8edf2;padding:9px 14px}
-#bar button.pl{background:#fff;color:#000}
+#bar button{background:#2c3040;border-radius:12px;color:#e8edf2;padding:9px 14px}
+#bar button.pl{background:#a9b8ff;color:#15171e}
 #bar select{background:#1f272e;color:#e8edf2;border:1px solid #33404a;border-radius:8px;padding:8px}
 #bar label{display:flex;gap:10px;align-items:center;font-size:.9rem}
-#bri{flex:1;accent-color:#fff}
+#bri{flex:1;accent-color:#a9b8ff}
 #cnt{font-size:.9rem;color:#aab4bd}
 </style>
 </head>
@@ -72,7 +77,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <div id="viewer" aria-modal="true" role="dialog">
   <div id="stage"><img id="pic" alt=""></div><div id="hud"></div>
   <div id="bar">
-    <label>Brightness <input id="bri" type="range" min="40" max="220" value="100"> <span id="briv">100%</span></label>
+    <label>Brightness <input id="bri" type="range" min="25" max="200" value="80"> <span id="briv">100%</span></label>
     <div class="row">
       <button id="prev" aria-label="Previous photo">Prev</button>
       <span id="cnt"></span>
@@ -86,13 +91,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   </div>
 </div>
 
+<div id="acct"><div class="ab"><div class="top"><h1>Account</h1><button class="ghost" id="ax">Close</button></div><p class="sub">Sign in to keep your folders in the cloud and get them back on any phone.</p><div id="aa"></div></div></div>
 <div id="lock"><div id="lt">Enter PIN</div><div id="ld"></div><div id="kp"></div><button id="lc" class="ghost">Cancel</button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (function(){
 var $=function(s){return document.querySelector(s)};
 var app=$('#app');
-var LOGO='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#111"/><path d="M120 190V120h70M322 120h70v70M392 322v70h-70M190 392h-70v-70" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><text x="256" y="300" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="150" fill="#fff" letter-spacing="4">msr</text></svg>';
+var LOGO='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#262a3d"/><path d="M120 190V120h70M322 120h70v70M392 322v70h-70M190 392h-70v-70" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><text x="256" y="300" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="150" fill="#fff" letter-spacing="4">msr</text></svg>';
 var LOGOURI='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(LOGO);
 var MIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',avif:'image/avif'};
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -113,17 +119,17 @@ function freeUrls(){urls.forEach(URL.revokeObjectURL.bind(URL));urls=[]}
 
 /* ---------- library ---------- */
 async function showLibrary(note){
-  freeUrls();
+  inF=false;freeUrls();
   var folders=await rq((await st('folders')).getAll());
   var html='<div class="top"><div class="brand"><img class="lg" src="'+LOGOURI+'" alt=""><h1>msr</h1></div><div class="row" style="gap:8px;flex-wrap:nowrap"><button id="shf" class="plus ghost" aria-label="Open a random folder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button><button id="plus" class="plus" aria-label="Add">+</button></div></div><p class="sub">Private. Not shown in your gallery.</p>'+
-    '<div id="menu" class="menu" hidden><label>ZIP files<input id="file" class="pi" type="file" multiple></label><label>Photos<input id="imgs" class="pi" type="file" accept="image/*" multiple></label><label>Folder<input id="dir" class="pi" type="file" webkitdirectory multiple></label><div class="mi" id="bkb">Back up all</div><label>Restore backup<input id="rst" class="pi" type="file"></label><div class="mi" id="gdb"></div><div class="mi" id="gdr">Restore from Drive</div><div class="mi" id="lkb"></div></div><div class="msg" id="note">'+esc(note||'')+'</div>';
+    '<div id="menu" class="menu" hidden><label>ZIP files<input id="file" class="pi" type="file" multiple></label><label>Photos<input id="imgs" class="pi" type="file" accept="image/*" multiple></label><label>Folder<input id="dir" class="pi" type="file" webkitdirectory multiple></label><div class="mi" id="bkb">Back up to phone</div><label>Restore backup<input id="rst" class="pi" type="file" multiple></label><div class="mi" id="acb"></div><div class="mi" id="lkb"></div></div><div class="msg" id="note">'+esc(note||'')+'</div>';
   if(!folders.length){html+='<div class="empty">Tap + to add a ZIP, photos, or a whole folder.</div>'}
   else{html+='<div class="grid">'+folders.map(function(f){return '<div class="fold" data-id="'+f.id+'" tabindex="0" role="button"><img class="cv" data-cv="'+f.id+'" alt=""><div class="in"><b>'+esc(f.name)+'</b><span>'+f.count+' photos</span></div></div>'}).join('')+'</div>'}
   app.innerHTML=html;
   $('#plus').onclick=function(){var m=$('#menu');m.hidden=!m.hidden};
   $('#lkb').textContent='App lock: '+(pin?'On':'Off');$('#lkb').onclick=lockMenu;
-  $('#bkb').onclick=backup;$('#rst').onchange=restore;
-  $('#gdb').textContent=gLabel();$('#gdb').onclick=gMenu;$('#gdr').onclick=driveRestore;
+  $('#bkb').onclick=backup;$('#rst').onchange=restore;$('#acb').textContent=acctLabel();$('#acb').onclick=openAcct;
+  
   $('#shf').onclick=function(){if(!folders.length){$('#note').textContent='Add a folder first.';return}showFolder(folders[Math.floor(Math.random()*folders.length)].id)};
   $('#file').onchange=pick;$('#imgs').onchange=pickImgs;$('#dir').onchange=pickDir;
   app.querySelectorAll('.fold').forEach(function(el){
@@ -255,6 +261,49 @@ async function decBlob(f,pw){
   return new Blob([acc].concat(parts));
 }
 async function backupRun(only){
+  var note=$('#note'),mn=$('#menu');if(mn)mn.hidden=true;skipLock=Date.now()+600000;
+  var folders=await rq((await st('folders')).getAll());
+  if(typeof only==='number')folders=folders.filter(function(f){return f.id===only});
+  if(!folders.length){note.textContent='Nothing to back up yet.';return}
+  if(!window.JSZip)throw new Error('ZIP tool did not load, check your connection');
+  var pw=prompt('Set a password to protect this backup. Remember it, it cannot be recovered. Leave empty for no password.');
+  if(pw===null)return;
+  if(pw&&!(window.crypto&&crypto.subtle)){note.textContent='Password protection needs a secure (https) page.';return}
+  var LIM=80*1048576,parts=[],cur=null;
+  for(var k=0;k<folders.length;k++){
+    var imgs=await rq((await st('images')).index('f').getAll(folders[k].id)),sz=0;
+    imgs.forEach(function(im){sz+=im.blob.size});
+    if(!cur||(cur.size+sz>LIM&&cur.fl.length)){cur={fl:[],size:0};parts.push(cur)}
+    cur.fl.push({f:folders[k],imgs:imgs});cur.size+=sz;
+  }
+  var date=new Date().toISOString().slice(0,10),tag=typeof only==='number'?'-'+folders[0].name.replace(/[^\\w-]+/g,'_'):'';
+  for(var p=0;p<parts.length;p++){
+    var pt=parts[p];
+    if(pt.size>314572800&&!confirm('Part '+(p+1)+' is about '+Math.round(pt.size/1048576)+' MB and may be heavy for your phone. Continue?'))return;
+    var zip=new JSZip(),last=-1;
+    pt.fl.forEach(function(x){var d=zip.folder(x.f.name.replace(/[\\/]/g,'-'));x.imgs.forEach(function(im,i){d.file(String(i+1).padStart(5,'0')+'_'+im.name,im.blob)})});
+    var blob=await zip.generateAsync({type:'blob',compression:'STORE'},function(m){var r=Math.floor(m.percent/2)*2;if(r!==last){last=r;note.textContent='Part '+(p+1)+' of '+parts.length+': '+r+'%'}});
+    zip=null;
+    if(pw){note.textContent='Encrypting part '+(p+1)+'\u2026';blob=await encBlob(blob,pw)}
+    var nm='msr-backup-'+date+tag+(parts.length>1?'-part'+(p+1)+'of'+parts.length:'')+(pw?'.msr':'.zip');
+    await saveStep(note,blob,nm,p+1,parts.length);
+    blob=null;
+  }
+  note.textContent='Backup finished: '+parts.length+' file'+(parts.length>1?'s':'')+' saved to your phone.';
+}
+function saveStep(note,blob,nm,k,n){
+  return new Promise(function(res){
+    note.innerHTML='File '+k+' of '+n+' is ready ('+Math.round(blob.size/1048576)+' MB). <button id="sv">Save to phone</button>';
+    $('#sv').onclick=async function(){
+      var btn=this;btn.disabled=true;var ok=false;
+      var file=new File([blob],nm,{type:blob.type});
+      try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nm});ok=true}}catch(e){if(e.name==='AbortError'){btn.disabled=false;return}}
+      if(!ok){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove()}
+      res();
+    };
+  });
+}
+async function backupFast(only){
   var note=$('#note'),mn=$('#menu');if(mn)mn.hidden=true;skipLock=Date.now()+300000;
   var tk=null;
   if(cid()){try{tk=await gtoken()}catch(e){note.textContent='Google sign-in failed ('+e.message+'). Saving to your phone instead.'}}
@@ -315,7 +364,7 @@ async function backupOld(only){
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove();
   };
 }
-async function restore(){var f=this.files[0];this.value='';if(f)restoreFrom(f)}
+async function restore(){var fs=Array.from(this.files);this.value='';for(var i=0;i<fs.length;i++){await restoreFrom(fs[i])}}
 async function restoreFrom(f){
   var note=$('#note');$('#menu').hidden=true;note.textContent='Reading backup…';
   var src=f;
@@ -409,6 +458,122 @@ async function driveRestore(){
     await restoreFrom(await d.blob());
   }catch(e){note.textContent='Google Drive error: '+e.message}
 }
+/* ---------- cloud account (Firebase sign-in + Firestore storage) ---------- */
+var CFG={apiKey:'AIzaSyCtYXgMSYZIfLEwRKWhmUf-gi9xlL25NmI',authDomain:'msrapp-55073.firebaseapp.com',projectId:'msrapp-55073',storageBucket:'msrapp-55073.firebasestorage.app',messagingSenderId:'56828566870',appId:'1:56828566870:web:d6186a3a31c38aec568af7'};
+var FB=null,curUser=null,authReady=false,CHK=600000;
+function acctLabel(){return curUser?'Cloud: '+(curUser.email||'signed in'):'Sign in'}
+async function fb(){
+  if(FB)return FB;
+  var b='https://www.gstatic.com/firebasejs/10.12.2/';
+  var A=await import(b+'firebase-app.js'),Au=await import(b+'firebase-auth.js'),Fs=await import(b+'firebase-firestore.js');
+  var app=A.initializeApp(CFG);
+  FB={Au:Au,F:Fs,auth:Au.getAuth(app),db:Fs.getFirestore(app)};
+  try{localStorage.setItem('msr_acct','1')}catch(e){}
+  Au.onAuthStateChanged(FB.auth,function(u){curUser=u;authReady=true;var l=$('#acb');if(l)l.textContent=acctLabel();if($('#acct').classList.contains('on'))renderAcct()});
+  return FB;
+}
+async function openAcct(){
+  var mn=$('#menu');if(mn)mn.hidden=true;
+  $('#acct').classList.add('on');renderAcct();
+  try{await fb()}catch(e){$('#aa').innerHTML='<p class="msg">Could not load sign-in. Check your internet connection and try again.</p>'}
+}
+$('#ax').onclick=function(){$('#acct').classList.remove('on')};
+function renderAcct(msg){
+  var el=$('#aa');
+  if(!FB||!authReady){el.innerHTML='<p class="msg">Loading\u2026</p>';return}
+  if(!curUser){
+    el.innerHTML='<input id="em" type="email" placeholder="Email" autocomplete="email"><input id="pwd" type="password" placeholder="Password (6 or more characters)" autocomplete="current-password"><div class="row" style="margin-top:8px"><button id="si">Sign in</button><button class="ghost" id="su">Create account</button></div><button class="ghost" id="gs" style="width:100%;margin-top:12px">Continue with Google</button><p class="msg" id="am">'+esc(msg||'')+'</p>';
+    $('#si').onclick=function(){doAuth('in')};$('#su').onclick=function(){doAuth('up')};$('#gs').onclick=doGoogle;
+  }else{
+    el.innerHTML='<p>Signed in as <b>'+esc(curUser.email||'your account')+'</b></p><div class="col"><button id="cb">Back up all folders to cloud</button><button class="ghost" id="cr">Restore from cloud</button><button class="ghost" id="so">Sign out</button></div><p class="msg" id="am">'+esc(msg||'')+'</p>';
+    $('#cb').onclick=cloudBackup;$('#cr').onclick=cloudRestore;$('#so').onclick=function(){FB.Au.signOut(FB.auth)};
+  }
+}
+function authMsg(e){
+  var c=(e&&e.code)||'';
+  if(c==='auth/unauthorized-domain')return 'In Firebase, open Authentication, Settings, Authorized domains, and add msr2007311.github.io';
+  if(c==='auth/operation-not-allowed')return 'This sign-in method is not turned on. In Firebase, open Authentication, Sign-in method.';
+  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found')return 'Wrong email or password.';
+  if(c==='auth/email-already-in-use')return 'That email already has an account. Tap Sign in.';
+  if(c==='auth/weak-password')return 'The password needs at least 6 characters.';
+  if(c==='auth/invalid-email')return 'That email does not look right.';
+  if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return 'Sign-in was cancelled.';
+  if(c==='auth/network-request-failed')return 'No internet connection.';
+  return 'Error: '+(c||(e&&e.message)||'unknown');
+}
+async function doAuth(kind){
+  var m=$('#am'),em=$('#em').value.trim(),pw=$('#pwd').value;
+  m.textContent='Please wait\u2026';
+  try{if(kind==='up')await FB.Au.createUserWithEmailAndPassword(FB.auth,em,pw);else await FB.Au.signInWithEmailAndPassword(FB.auth,em,pw)}
+  catch(er){m.textContent=authMsg(er)}
+}
+async function doGoogle(){
+  skipLock=Date.now()+300000;
+  try{await FB.Au.signInWithPopup(FB.auth,new FB.Au.GoogleAuthProvider())}catch(er){var m=$('#am');if(m)m.textContent=authMsg(er)}
+}
+function cloudMsg(e){
+  var c=(e&&e.code)||'';
+  if(c==='permission-denied')return 'The cloud refused this. In Firebase, open Firestore Database, Rules, and paste the rules I gave you.';
+  if(c==='failed-precondition'||c==='not-found')return 'Create the Firestore Database first (Firebase, Build, Firestore Database, Create database).';
+  if(c==='resource-exhausted')return 'The free cloud space or daily limit is used up. Try again tomorrow or delete old data.';
+  if(c==='unavailable')return 'No connection to the cloud. Check your internet.';
+  return 'Cloud error: '+(c||(e&&e.message)||'unknown');
+}
+function fid(n){var a=5381,b=52711;for(var i=0;i<n.length;i++){var c=n.charCodeAt(i);a=(a*33+c)>>>0;b=(b*31+c)>>>0}return a.toString(36)+b.toString(36)+n.length}
+function b64(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){var s=r.result;res(s.slice(s.indexOf(',')+1))};r.onerror=function(){rej(r.error)};r.readAsDataURL(b)})}
+function cdoc(uid,id,i){return FB.F.doc(FB.db,'users',uid,'files',id,'chunks',String(i).padStart(6,'0'))}
+async function putFile(uid,name,blob,onp){
+  var F=FB.F,id=fid(name),meta=F.doc(FB.db,'users',uid,'files',id);
+  var old=await F.getDoc(meta),oldN=old.exists()?old.data().parts:0;
+  var n=Math.max(1,Math.ceil(blob.size/CHK)),next=0,done=0;
+  async function w(){for(;;){var i=next++;if(i>=n)break;var d=await b64(blob.slice(i*CHK,(i+1)*CHK));await F.setDoc(cdoc(uid,id,i),{d:d});done++;onp(done/n)}}
+  await Promise.all([w(),w(),w()]);
+  await F.setDoc(meta,{name:name,parts:n,size:blob.size,updated:Date.now()});
+  for(var j=n;j<oldN;j++)await F.deleteDoc(cdoc(uid,id,j));
+}
+async function cloudBackup(){
+  var m=$('#am'),u=curUser;if(!u)return;skipLock=Date.now()+1800000;
+  try{
+    if(!window.JSZip)throw new Error('ZIP tool did not load, check your connection');
+    var folders=await rq((await st('folders')).getAll());
+    if(!folders.length){m.textContent='Nothing to back up yet.';return}
+    var total=0;
+    for(var q=0;q<folders.length;q++){var all=await rq((await st('images')).index('f').getAll(folders[q].id));all.forEach(function(im){total+=im.blob.size})}
+    if(total>800*1048576&&!confirm('Your photos are about '+Math.round(total/1048576)+' MB. The free cloud space is about 1 GB. Continue?'))return;
+    for(var k=0;k<folders.length;k++){
+      var f=folders[k],imgs=await rq((await st('images')).index('f').getAll(f.id));
+      m.textContent='Packing '+f.name+' ('+(k+1)+' of '+folders.length+')\u2026';
+      var zip=new JSZip(),dir=zip.folder(f.name.replace(/[\\/]/g,'-'));
+      imgs.forEach(function(im,i){dir.file(String(i+1).padStart(5,'0')+'_'+im.name,im.blob)});
+      var blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+      zip=null;
+      await putFile(u.uid,f.name,blob,function(p){m.textContent='Uploading '+f.name+' ('+(k+1)+' of '+folders.length+'): '+Math.round(p*100)+'%'});
+      blob=null;
+    }
+    m.textContent='Cloud backup finished: '+folders.length+' folder'+(folders.length>1?'s':'')+' saved to your account.';
+  }catch(e){m.textContent=cloudMsg(e)}
+}
+async function cloudRestore(){
+  var m=$('#am'),u=curUser;if(!u)return;skipLock=Date.now()+1800000;
+  try{
+    var F=FB.F,snap=await F.getDocs(F.collection(FB.db,'users',u.uid,'files'));
+    var list=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x});
+    if(!list.length){m.textContent='No cloud backup found for this account.';return}
+    var have=(await rq((await st('folders')).getAll())).map(function(f){return f.name}),got=0,skipped=0;
+    for(var k=0;k<list.length;k++){
+      var x=list[k];
+      if(have.indexOf(x.name)>-1){skipped++;continue}
+      var parts=new Array(x.parts),nx=0,dn=0;
+      var w=async function(){for(;;){var i=nx++;if(i>=x.parts)break;var cs=await F.getDoc(cdoc(u.uid,x.id,i));parts[i]=await (await fetch('data:application/octet-stream;base64,'+cs.data().d)).blob();dn++;m.textContent='Downloading '+x.name+': '+Math.round(dn/x.parts*100)+'%'}};
+      await Promise.all([w(),w(),w(),w()]);
+      m.textContent='Restoring '+x.name+'\u2026';
+      await restoreFrom(new Blob(parts,{type:'application/zip'}));
+      got++;
+    }
+    $('#acct').classList.remove('on');
+    showLibrary(got+' folder'+(got===1?'':'s')+' restored from the cloud'+(skipped?', '+skipped+' already on this phone':'')+'.');
+  }catch(e){m.textContent=cloudMsg(e)}
+}
 async function pickImgs(){
   var fs=Array.from(this.files);this.value='';if(!fs.length)return;
   var n=prompt('Folder name','Photos');if(!n)return;
@@ -444,6 +609,7 @@ async function importZip(file){
 /* ---------- folder ---------- */
 var cur={imgs:[],i:0};
 async function showFolder(id){
+  if(!inF){history.pushState({v:'f'},'');inF=true}
   freeUrls();
   var f=await rq((await st('folders')).get(id));
   var imgs=await rq((await st('images')).index('f').getAll(id));
@@ -452,13 +618,13 @@ async function showFolder(id){
     '<h1 style="margin-top:16px">'+esc(f.name)+'</h1><p class="sub">'+imgs.length+' photos, in order</p>'+
     '<div class="row"><button id="ss">Start slideshow</button><button class="ghost" id="fbk">Back up folder</button></div><div class="msg" id="note"></div>'+
     '<div class="thumbs">'+cur.imgs.map(function(u,i){return '<img loading="lazy" decoding="async" data-i="'+i+'" src="'+u+'" alt="Photo '+(i+1)+'">'}).join('')+'</div>';
-  $('#back').onclick=function(){showLibrary()};
+  $('#back').onclick=function(){history.back()};
   $('#del').onclick=async function(){
     if(!confirm('Delete “'+f.name+'” and its '+imgs.length+' photos from this app?'))return;
     var d=await dbp,t=d.transaction(['folders','images'],'readwrite'),is=t.objectStore('images');
     var keys=await rq(is.index('f').getAllKeys(id));
     keys.forEach(function(k){is.delete(k)});t.objectStore('folders').delete(id);
-    await new Promise(function(r){t.oncomplete=r});showLibrary('Folder deleted.');
+    await new Promise(function(r){t.oncomplete=r});window.__pn='Folder deleted.';history.back();
   };
   $('#ss').onclick=function(){openViewer(0,true)};
   $('#fbk').onclick=function(){backup(id)};
@@ -467,20 +633,20 @@ async function showFolder(id){
 
 /* ---------- viewer: brightness + slideshow ---------- */
 var pic=$('#pic'),bri=$('#bri'),timer=null,playBtn=$('#play');
-try{var sv=localStorage.getItem('pv_bri');if(sv)bri.value=sv}catch(e){}
-function applyBri(){pic.style.filter='brightness('+bri.value/100+')';$('#briv').textContent=bri.value+'%';try{localStorage.setItem('pv_bri',bri.value)}catch(e){}}
+try{var sv=localStorage.getItem('pv_bri2');if(sv)bri.value=sv}catch(e){}
+function applyBri(){pic.style.filter='brightness('+bri.value/100+')';$('#briv').textContent=bri.value+'%';try{localStorage.setItem('pv_bri2',bri.value)}catch(e){}}
 bri.oninput=applyBri;
 function show(){pic.src=cur.imgs[cur.i];$('#cnt').textContent=(cur.i+1)+' / '+cur.imgs.length;applyBri()}
 function go(d){var n=cur.imgs.length;cur.i=(cur.i+d+n)%n;show()}
 function stop(){clearInterval(timer);timer=null;playBtn.textContent='Start slideshow'}
 function play(){stop();timer=setInterval(function(){go(1)},+$('#spd').value*1000);playBtn.textContent='Pause slideshow'}
-function openViewer(i,auto){cur.i=i;var v=$('#viewer');v.classList.add('on');$('#bar').classList.add('off');show();
+function openViewer(i,auto){cur.i=i;var v=$('#viewer');v.classList.add('on');history.pushState({v:'v'},'');$('#bar').classList.add('off');show();
   try{var rf=v.requestFullscreen||v.webkitRequestFullscreen;if(rf){var p=rf.call(v);if(p&&p.catch)p.catch(function(){})}}catch(e){}
   if(auto)play()}
 function closeViewer(){stop();$('#viewer').classList.remove('on');try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
 $('#prev').onclick=function(){go(-1)};
 $('#next').onclick=function(){go(1)};
-$('#close').onclick=closeViewer;
+$('#close').onclick=uiClose;
 $('#fit').onclick=function(){var f=pic.classList.toggle('fill');this.textContent=f?'Fit':'Fill'};
 playBtn.onclick=function(){timer?stop():play()};
 $('#spd').onchange=function(){if(timer)play()};
@@ -491,14 +657,14 @@ function hud(t){var h=$('#hud');h.textContent=t;h.classList.add('on');clearTimeo
 $('#stage').addEventListener('touchstart',function(e){var t=e.touches[0];t0={x:t.clientX,y:t.clientY,b:+bri.value,m:0}},{passive:true});
 $('#stage').addEventListener('touchmove',function(e){if(!t0)return;var t=e.touches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y;
   if(!t0.m&&Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx))t0.m=1;
-  if(t0.m===1){bri.value=Math.max(40,Math.min(220,Math.round(t0.b-dy/innerHeight*200)));applyBri();hud('Brightness '+bri.value+'%')}},{passive:true});
+  if(t0.m===1){bri.value=Math.max(25,Math.min(200,Math.round(t0.b-dy/innerHeight*200)));applyBri();hud('Brightness '+bri.value+'%')}},{passive:true});
 $('#stage').addEventListener('touchend',function(e){if(!t0)return;var t=e.changedTouches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y,m=t0.m;t0=null;e.preventDefault();
   if(m===1)return;
   if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)){go(dx<0?1:-1);if(timer)play()}
   else if(Math.abs(dx)<12&&Math.abs(dy)<12)tapAt(t.clientX)});
 document.addEventListener('keydown',function(e){
   if(!$('#viewer').classList.contains('on'))return;
-  if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);else if(e.key==='Escape')closeViewer();
+  if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);else if(e.key==='Escape')uiClose();
 });
 
 /* ---------- app lock ---------- */
@@ -529,6 +695,16 @@ function lockMenu(){
 }
 document.addEventListener('click',function(e){if(e.target&&e.target.type==='file')skipLock=Date.now()+120000},true);
 document.addEventListener('visibilitychange',function(){if(document.hidden&&pin&&Date.now()>skipLock){closeViewer();lockNow()}});
+var inF=false,wasFs=false;
+function uiClose(){if(history.state&&history.state.v==='v')history.back();else closeViewer()}
+window.addEventListener('popstate',function(e){
+  if($('#viewer').classList.contains('on')){closeViewer();return}
+  if(!(e.state&&e.state.v)&&inF){var n=window.__pn;window.__pn=void 0;showLibrary(n)}
+});
+document.addEventListener('fullscreenchange',function(){
+  if(document.fullscreenElement){wasFs=true}
+  else if(wasFs){wasFs=false;if($('#viewer').classList.contains('on'))uiClose()}
+});
 lockNow();
 var im=new Image();
 im.onload=function(){
@@ -541,6 +717,7 @@ im.onload=function(){
   }catch(e){}
 };
 im.src=LOGOURI;
+try{if(localStorage.getItem('msr_acct')==='1')fb().catch(function(){})}catch(e){}
 showLibrary();
 })();
 </script>
