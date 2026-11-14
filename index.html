@@ -241,14 +241,16 @@ async function gMenu(){
   var note=$('#note'),lab=$('#gdb');$('#menu').hidden=true;
   if(!cid()){
     var v=prompt('Paste your Google Client ID (it ends with .apps.googleusercontent.com)');
-    if(!v)return;
-    try{localStorage.setItem('msr_cid',v.trim())}catch(e){}
+    if(!v)return;v=v.trim();
+    if(!/^\d+-[a-z0-9_]+\.apps\.googleusercontent\.com$/i.test(v)){note.textContent='That does not look like a Client ID. It looks like 123456789-abcdef.apps.googleusercontent.com';return}
+    try{localStorage.setItem('msr_cid',v)}catch(e){}
     lab.textContent=gLabel();note.textContent='Client ID saved. Open the + menu and tap Google Drive again to sign in.';return;
   }
   if(gtok&&Date.now()<gexp){
     if(confirm('Disconnect Google Drive and forget the saved Client ID?')){gtok=null;try{localStorage.removeItem('msr_cid')}catch(e){}lab.textContent=gLabel();note.textContent='Google Drive disconnected.'}
     return;
   }
+  if(!confirm('Sign in to Google Drive? Tap Cancel to enter a different Client ID.')){try{localStorage.removeItem('msr_cid')}catch(e){}lab.textContent=gLabel();note.textContent='Client ID cleared. Tap + then Google Drive to paste a new one.';return}
   try{await gtoken();lab.textContent=gLabel();note.textContent='Signed in. Backups now go to your Google Drive.'}
   catch(e){note.textContent='Sign-in failed: '+e.message}
 }
