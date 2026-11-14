@@ -1,5 +1,5 @@
-var V='msr-v2';
-var ASSETS=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
+var V='msr-v3';
+var ASSETS=['./','index.html','manifest.json','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(V).then(function(c){
     return Promise.all(ASSETS.map(function(a){return c.add(a).catch(function(){})}));
