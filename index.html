@@ -116,13 +116,14 @@ async function showLibrary(note){
   freeUrls();
   var folders=await rq((await st('folders')).getAll());
   var html='<div class="top"><div class="brand"><img class="lg" src="'+LOGOURI+'" alt=""><h1>msr</h1></div><div class="row" style="gap:8px;flex-wrap:nowrap"><button id="shf" class="plus ghost" aria-label="Open a random folder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button><button id="plus" class="plus" aria-label="Add">+</button></div></div><p class="sub">Private. Not shown in your gallery.</p>'+
-    '<div id="menu" class="menu" hidden><label>ZIP files<input id="file" class="pi" type="file" multiple></label><label>Photos<input id="imgs" class="pi" type="file" accept="image/*" multiple></label><label>Folder<input id="dir" class="pi" type="file" webkitdirectory multiple></label><div class="mi" id="bkb">Back up all</div><label>Restore backup<input id="rst" class="pi" type="file"></label><div class="mi" id="lkb"></div></div><div class="msg" id="note">'+esc(note||'')+'</div>';
+    '<div id="menu" class="menu" hidden><label>ZIP files<input id="file" class="pi" type="file" multiple></label><label>Photos<input id="imgs" class="pi" type="file" accept="image/*" multiple></label><label>Folder<input id="dir" class="pi" type="file" webkitdirectory multiple></label><div class="mi" id="bkb">Back up all</div><label>Restore backup<input id="rst" class="pi" type="file"></label><div class="mi" id="gdb"></div><div class="mi" id="gdr">Restore from Drive</div><div class="mi" id="lkb"></div></div><div class="msg" id="note">'+esc(note||'')+'</div>';
   if(!folders.length){html+='<div class="empty">Tap + to add a ZIP, photos, or a whole folder.</div>'}
   else{html+='<div class="grid">'+folders.map(function(f){return '<div class="fold" data-id="'+f.id+'" tabindex="0" role="button"><img class="cv" data-cv="'+f.id+'" alt=""><div class="in"><b>'+esc(f.name)+'</b><span>'+f.count+' photos</span></div></div>'}).join('')+'</div>'}
   app.innerHTML=html;
   $('#plus').onclick=function(){var m=$('#menu');m.hidden=!m.hidden};
   $('#lkb').textContent='App lock: '+(pin?'On':'Off');$('#lkb').onclick=lockMenu;
   $('#bkb').onclick=backup;$('#rst').onchange=restore;
+  $('#gdb').textContent=gLabel();$('#gdb').onclick=gMenu;$('#gdr').onclick=driveRestore;
   $('#shf').onclick=function(){if(!folders.length){$('#note').textContent='Add a folder first.';return}showFolder(folders[Math.floor(Math.random()*folders.length)].id)};
   $('#file').onchange=pick;$('#imgs').onchange=pickImgs;$('#dir').onchange=pickDir;
   app.querySelectorAll('.fold').forEach(function(el){
@@ -165,6 +166,8 @@ async function encBlob(b,pw){var salt=crypto.getRandomValues(new Uint8Array(16))
 async function decBuf(buf,pw){var u=new Uint8Array(buf),key=await kdf(pw,u.slice(4,20));return crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(20,32)},key,u.slice(32))}
 async function backup(){
   var note=$('#note');$('#menu').hidden=true;skipLock=Date.now()+120000;
+  var tk=null;
+  if(cid()){try{tk=await gtoken()}catch(e){note.textContent='Google sign-in failed ('+e.message+'). Saving to your phone instead.'}}
   var folders=await rq((await st('folders')).getAll());
   if(!folders.length){note.textContent='Nothing to back up yet.';return}
   var pw=prompt('Set a password to protect this backup. Remember it, it cannot be recovered. Leave empty for no password.');
@@ -180,15 +183,17 @@ async function backup(){
   var blob=await zip.generateAsync({type:'blob',compression:'STORE'},function(m){note.textContent='Creating backup: '+Math.round(m.percent)+'%'});
   if(pw){note.textContent='Encrypting…';blob=await encBlob(blob,pw)}
   var nm='msr-backup-'+new Date().toISOString().slice(0,10)+(pw?'.msr':'.zip');
-  note.innerHTML='Backup ready. <button id="sv">Save or share</button>';
+  var fm='';
+  if(tk){try{await driveUpload(blob,nm,tk,note);note.textContent='Backup saved to your Google Drive: '+nm;return}catch(e){fm='Drive upload failed ('+e.message+'). '}}
+  note.innerHTML=esc(fm)+'Backup ready. <button id="sv">Save or share</button>';
   $('#sv').onclick=async function(){
     var file=new File([blob],nm,{type:blob.type});
     try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nm});return}}catch(e){if(e.name==='AbortError')return}
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove();
   };
 }
-async function restore(){
-  var f=this.files[0];this.value='';if(!f)return;
+async function restore(){var f=this.files[0];this.value='';if(f)restoreFrom(f)}
+async function restoreFrom(f){
   var note=$('#note');$('#menu').hidden=true;note.textContent='Reading backup…';
   var src=f;
   try{
@@ -216,6 +221,66 @@ async function restore(){
     try{await saveFiles(keys[k],files)}catch(er){}
   }
   showLibrary(keys.length+' folder'+(keys.length>1?'s':'')+' restored.');
+}
+var GS='https://www.googleapis.com/auth/drive.file',gtok=null,gexp=0;
+function cid(){try{return localStorage.getItem('msr_cid')||''}catch(e){return ''}}
+function gLabel(){return 'Google Drive: '+(!cid()?'set up':(gtok&&Date.now()<gexp?'connected':'sign in'))}
+function loadGsi(){return new Promise(function(res,rej){if(window.google&&google.accounts&&google.accounts.oauth2)return res();var s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=res;s.onerror=function(){rej(new Error('could not load Google sign-in, check internet'))};document.head.appendChild(s)})}
+async function gtoken(){
+  if(gtok&&Date.now()<gexp)return gtok;
+  skipLock=Date.now()+180000;
+  await loadGsi();
+  return new Promise(function(res,rej){
+    var c=google.accounts.oauth2.initTokenClient({client_id:cid(),scope:GS,
+      callback:function(r){if(r.error){rej(new Error(r.error))}else{gtok=r.access_token;gexp=Date.now()+(r.expires_in-60)*1000;res(gtok)}},
+      error_callback:function(e){rej(new Error(e&&e.type?e.type:'sign-in cancelled'))}});
+    c.requestAccessToken();
+  });
+}
+async function gMenu(){
+  var note=$('#note'),lab=$('#gdb');$('#menu').hidden=true;
+  if(!cid()){
+    var v=prompt('Paste your Google Client ID (it ends with .apps.googleusercontent.com)');
+    if(!v)return;
+    try{localStorage.setItem('msr_cid',v.trim())}catch(e){}
+    lab.textContent=gLabel();note.textContent='Client ID saved. Open the + menu and tap Google Drive again to sign in.';return;
+  }
+  if(gtok&&Date.now()<gexp){
+    if(confirm('Disconnect Google Drive and forget the saved Client ID?')){gtok=null;try{localStorage.removeItem('msr_cid')}catch(e){}lab.textContent=gLabel();note.textContent='Google Drive disconnected.'}
+    return;
+  }
+  try{await gtoken();lab.textContent=gLabel();note.textContent='Signed in. Backups now go to your Google Drive.'}
+  catch(e){note.textContent='Sign-in failed: '+e.message}
+}
+async function driveUpload(blob,nm,tk,note){
+  var ty=blob.type||'application/octet-stream';
+  note.textContent='Starting upload to Google Drive…';
+  var r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',{method:'POST',headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':ty,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({name:nm,description:'msr backup'})});
+  if(!r.ok)throw new Error('Drive refused, code '+r.status);
+  var loc=r.headers.get('Location');if(!loc)throw new Error('no upload address');
+  note.textContent='Uploading '+Math.round(blob.size/1048576)+' MB to Google Drive…';
+  var u=await fetch(loc,{method:'PUT',headers:{'Content-Type':ty},body:blob});
+  if(!u.ok)throw new Error('upload failed, code '+u.status);
+}
+async function driveRestore(){
+  var note=$('#note');$('#menu').hidden=true;
+  if(!cid()){note.textContent='Set up Google Drive first: tap + then Google Drive.';return}
+  try{
+    var tk=await gtoken();
+    note.textContent='Looking in Google Drive…';
+    var q=encodeURIComponent("name contains 'msr-backup' and trashed=false");
+    var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&orderBy=createdTime%20desc&pageSize=10&fields=files(id,name,createdTime)',{headers:{Authorization:'Bearer '+tk}});
+    if(!r.ok)throw new Error('Drive refused, code '+r.status);
+    var fl=(await r.json()).files||[];
+    if(!fl.length){note.textContent='No msr backups found in this Google account.';return}
+    var pick=1;
+    if(fl.length>1){var s=prompt('Choose a backup (type the number):\n'+fl.map(function(x,i){return (i+1)+') '+x.name+'  '+x.createdTime.slice(0,10)}).join('\n'),'1');if(s===null){note.textContent='';return}pick=parseInt(s,10)||1}
+    var file=fl[Math.min(Math.max(pick,1),fl.length)-1];
+    note.textContent='Downloading '+file.name+'…';
+    var d=await fetch('https://www.googleapis.com/drive/v3/files/'+file.id+'?alt=media',{headers:{Authorization:'Bearer '+tk}});
+    if(!d.ok)throw new Error('download failed, code '+d.status);
+    await restoreFrom(await d.blob());
+  }catch(e){note.textContent='Google Drive error: '+e.message}
 }
 async function pickImgs(){
   var fs=Array.from(this.files);this.value='';if(!fs.length)return;
