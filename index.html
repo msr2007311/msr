@@ -164,11 +164,134 @@ async function saveFiles(base,files){
 async function kdf(pw,salt){var km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
 async function encBlob(b,pw){var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));var key=await kdf(pw,salt);var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,await b.arrayBuffer());return new Blob([new TextEncoder().encode('MSRB'),salt,iv,ct],{type:'application/octet-stream'})}
 async function decBuf(buf,pw){var u=new Uint8Array(buf),key=await kdf(pw,u.slice(4,20));return crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(20,32)},key,u.slice(32))}
-async function backup(){
-  var note=$('#note');$('#menu').hidden=true;skipLock=Date.now()+120000;
+async function backup(only){
+  try{await backupRun(only)}catch(e){var n=$('#note');if(n)n.textContent='Backup stopped: '+(e&&e.message?e.message:'unknown error')+'. Try backing up one folder at a time.'}
+}
+var WK='var T=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;T[n]=c>>>0}onmessage=function(e){var u=new Uint8Array(e.data),c=-1;for(var i=0;i<u.length;i++)c=T[(c^u[i])&255]^(c>>>8);postMessage((c^-1)>>>0)}';
+var CT=null;
+function crcMain(u){if(!CT){CT=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;CT[n]=c>>>0}}var x=-1;for(var i=0;i<u.length;i++)x=CT[(x^u[i])&255]^(x>>>8);return (x^-1)>>>0}
+/* checksums for every photo, computed by several background workers at once, one photo in memory per worker */
+async function crcAll(blobs,onp){
+  var out=new Array(blobs.length),next=0,done=0,n=Math.max(1,Math.min(3,navigator.hardwareConcurrency||2));
+  var url=URL.createObjectURL(new Blob([WK],{type:'text/javascript'}));
+  async function slot(){
+    var w=null;try{w=new Worker(url)}catch(e){}
+    try{
+      for(;;){
+        var i=next++;if(i>=blobs.length)break;
+        var buf=await blobs[i].arrayBuffer();
+        if(w){out[i]=await new Promise(function(res,rej){w.onmessage=function(e){res(e.data)};w.onerror=function(){rej(new Error('background worker failed'))};w.postMessage(buf,[buf])})}
+        else{out[i]=crcMain(new Uint8Array(buf));await new Promise(function(r){setTimeout(r,0)})}
+        done++;onp(done);
+      }
+    }finally{if(w)w.terminate()}
+  }
+  var s=[];for(var k=0;k<n;k++)s.push(slot());
+  try{await Promise.all(s)}finally{URL.revokeObjectURL(url)}
+  return out;
+}
+/* ZIP file built from references to the stored photos, so nothing is copied into memory */
+function buildZip(items){
+  var enc=new TextEncoder(),parts=[],cd=[],off=0,d=new Date();
+  var tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  items.forEach(function(it){
+    var nm=enc.encode(it.name),sz=it.blob.size,h=new DataView(new ArrayBuffer(30)),c=new DataView(new ArrayBuffer(46));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(10,tm,true);h.setUint16(12,dt,true);h.setUint32(14,it.crc,true);h.setUint32(18,sz,true);h.setUint32(22,sz,true);h.setUint16(26,nm.length,true);
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);c.setUint32(16,it.crc,true);c.setUint32(20,sz,true);c.setUint32(24,sz,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    parts.push(h.buffer,nm,it.blob);cd.push(c.buffer,nm);off+=30+nm.length+sz;
+  });
+  var cds=cd.reduce(function(s,p){return s+p.byteLength},0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,items.length,true);e.setUint16(10,items.length,true);e.setUint32(12,cds,true);e.setUint32(16,off,true);
+  return new Blob(parts.concat(cd,[e.buffer]),{type:'application/zip'});
+}
+/* reads an uncompressed ZIP without loading it into memory; returns null if it is not that kind */
+async function readStore(b){
+  try{
+    var tail=new DataView(await b.slice(Math.max(0,b.size-66000)).arrayBuffer()),p=-1;
+    for(var i=tail.byteLength-22;i>=0;i--){if(tail.getUint32(i,true)===0x06054b50){p=i;break}}
+    if(p<0)return null;
+    var n=tail.getUint16(p+10,true),cs=tail.getUint32(p+12,true),co=tail.getUint32(p+16,true);
+    if(n===0xffff||co===0xffffffff)return null;
+    var cd=new DataView(await b.slice(co,co+cs).arrayBuffer()),dec=new TextDecoder(),files={},q=0;
+    for(var k=0;k<n;k++){
+      if(cd.getUint32(q,true)!==0x02014b50)return null;
+      var meth=cd.getUint16(q+10,true),sz=cd.getUint32(q+20,true),nl=cd.getUint16(q+28,true),el=cd.getUint16(q+30,true),cl=cd.getUint16(q+32,true),off=cd.getUint32(q+42,true);
+      var name=dec.decode(new Uint8Array(cd.buffer,q+46,nl)),dir=name.charAt(name.length-1)==='/';
+      if(!dir&&meth!==0)return null;
+      files[name]={name:name,dir:dir,off:off,sz:sz};q+=46+nl+el+cl;
+    }
+    for(var nm in files){
+      var e=files[nm];if(e.dir)continue;
+      var lh=new DataView(await b.slice(e.off,e.off+30).arrayBuffer()),st=e.off+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+      e.async=(function(s,z){return function(){return Promise.resolve(b.slice(s,s+z))}})(st,e.sz);
+    }
+    return {files:files};
+  }catch(e){return null}
+}
+/* encryption in 4 MB pieces so big backups do not crash the phone */
+async function encBlob2(b,pw,onp){
+  var salt=crypto.getRandomValues(new Uint8Array(16)),iv0=crypto.getRandomValues(new Uint8Array(12)),key=await kdf(pw,salt),CH=4194304;
+  var out=new Blob([new TextEncoder().encode('MSR2'),salt,iv0]),batch=[];
+  for(var o=0,i=0;o<b.size;o+=CH,i++){
+    var iv=iv0.slice();iv[8]^=(i>>>24)&255;iv[9]^=(i>>>16)&255;iv[10]^=(i>>>8)&255;iv[11]^=i&255;
+    var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,await b.slice(o,o+CH).arrayBuffer());
+    var len=new Uint8Array(4);new DataView(len.buffer).setUint32(0,ct.byteLength);
+    batch.push(len,ct);
+    if(batch.length>=16){out=new Blob([out].concat(batch));batch=[]}
+    onp(Math.min(o+CH,b.size)/b.size);
+    await new Promise(function(r){setTimeout(r,0)});
+  }
+  return new Blob([out].concat(batch),{type:'application/octet-stream'});
+}
+async function decBlob(f,pw){
+  var h=new Uint8Array(await f.slice(0,32).arrayBuffer()),key=await kdf(pw,h.slice(4,20)),iv0=h.slice(20,32),pos=32,i=0,parts=[],acc=new Blob([]);
+  while(pos<f.size){
+    var len=new DataView(await f.slice(pos,pos+4).arrayBuffer()).getUint32(0);pos+=4;
+    var iv=iv0.slice();iv[8]^=(i>>>24)&255;iv[9]^=(i>>>16)&255;iv[10]^=(i>>>8)&255;iv[11]^=i&255;
+    parts.push(await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,await f.slice(pos,pos+len).arrayBuffer()));
+    pos+=len;i++;
+    if(parts.length>=16){acc=new Blob([acc].concat(parts));parts=[]}
+  }
+  return new Blob([acc].concat(parts));
+}
+async function backupRun(only){
+  var note=$('#note'),mn=$('#menu');if(mn)mn.hidden=true;skipLock=Date.now()+300000;
   var tk=null;
   if(cid()){try{tk=await gtoken()}catch(e){note.textContent='Google sign-in failed ('+e.message+'). Saving to your phone instead.'}}
   var folders=await rq((await st('folders')).getAll());
+  if(typeof only==='number')folders=folders.filter(function(f){return f.id===only});
+  if(!folders.length){note.textContent='Nothing to back up yet.';return}
+  var pw=prompt('Set a password to protect this backup. Remember it, it cannot be recovered. Leave empty for no password.');
+  if(pw===null)return;
+  if(pw&&!(window.crypto&&crypto.subtle)){note.textContent='Password protection needs a secure (https) page.';return}
+  var items=[],total=0;
+  for(var k=0;k<folders.length;k++){
+    var f=folders[k],dir=f.name.replace(/[\\/]/g,'-');
+    var imgs=await rq((await st('images')).index('f').getAll(f.id));
+    imgs.forEach(function(im,i){items.push({name:dir+'/'+String(i+1).padStart(5,'0')+'_'+im.name,blob:im.blob});total+=im.blob.size});
+  }
+  if(!items.length){note.textContent='No photos to back up.';return}
+  if(items.length>60000||total>3.9e9)throw new Error('too big for one file ('+Math.round(total/1048576)+' MB), back up folders one at a time');
+  var crcs=await crcAll(items.map(function(x){return x.blob}),function(d){note.textContent='Preparing photos: '+d+' / '+items.length});
+  items.forEach(function(x,i){x.crc=crcs[i]});
+  var blob=buildZip(items);
+  if(pw){blob=await encBlob2(blob,pw,function(p){note.textContent='Encrypting: '+Math.round(p*100)+'%'})}
+  var nm='msr-backup-'+(typeof only==='number'?folders[0].name.replace(/[^\w-]+/g,'_')+'-':'')+new Date().toISOString().slice(0,10)+(pw?'.msr':'.zip');
+  var fm='';
+  if(tk){try{await driveUpload(blob,nm,tk,note);note.textContent='Backup saved to your Google Drive: '+nm;return}catch(e){fm='Drive upload failed ('+e.message+'). '}}
+  note.innerHTML=esc(fm)+'Backup ready ('+Math.round(blob.size/1048576)+' MB). <button id="sv">Save or share</button>';
+  $('#sv').onclick=async function(){
+    var file=new File([blob],nm,{type:blob.type});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nm});return}}catch(e){if(e.name==='AbortError')return}
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove();
+  };
+}
+async function backupOld(only){
+  var note=$('#note');var mn=$('#menu');if(mn)mn.hidden=true;skipLock=Date.now()+120000;
+  var tk=null;
+  if(cid()){try{tk=await gtoken()}catch(e){note.textContent='Google sign-in failed ('+e.message+'). Saving to your phone instead.'}}
+  var folders=await rq((await st('folders')).getAll());
+  if(typeof only==='number')folders=folders.filter(function(f){return f.id===only});
   if(!folders.length){note.textContent='Nothing to back up yet.';return}
   var pw=prompt('Set a password to protect this backup. Remember it, it cannot be recovered. Leave empty for no password.');
   if(pw===null)return;
@@ -182,7 +305,7 @@ async function backup(){
   }
   var blob=await zip.generateAsync({type:'blob',compression:'STORE'},function(m){note.textContent='Creating backup: '+Math.round(m.percent)+'%'});
   if(pw){note.textContent='Encrypting…';blob=await encBlob(blob,pw)}
-  var nm='msr-backup-'+new Date().toISOString().slice(0,10)+(pw?'.msr':'.zip');
+  var nm='msr-backup-'+(typeof only==='number'?folders[0].name.replace(/[^\w-]+/g,'_')+'-':'')+new Date().toISOString().slice(0,10)+(pw?'.msr':'.zip');
   var fm='';
   if(tk){try{await driveUpload(blob,nm,tk,note);note.textContent='Backup saved to your Google Drive: '+nm;return}catch(e){fm='Drive upload failed ('+e.message+'). '}}
   note.innerHTML=esc(fm)+'Backup ready. <button id="sv">Save or share</button>';
@@ -198,13 +321,15 @@ async function restoreFrom(f){
   var src=f;
   try{
     var head=new Uint8Array(await f.slice(0,4).arrayBuffer());
-    if(String.fromCharCode.apply(null,head)==='MSRB'){
+    var tag=String.fromCharCode.apply(null,head);
+    if(tag==='MSRB'||tag==='MSR2'){
       var pw=prompt('Backup password');if(pw===null){note.textContent='';return}
       if(!(window.crypto&&crypto.subtle)){note.textContent='Opening a protected backup needs a secure (https) page.';return}
-      note.textContent='Decrypting…';src=await decBuf(await f.arrayBuffer(),pw);
+      note.textContent='Decrypting…';src=tag==='MSR2'?await decBlob(f,pw):new Blob([await decBuf(await f.arrayBuffer(),pw)]);
     }
   }catch(e){note.textContent='Wrong password or damaged file.';return}
-  var zip;try{zip=await JSZip.loadAsync(src)}catch(e){note.textContent='That is not a valid backup file.';return}
+  var zip=await readStore(src);
+  if(!zip){try{zip=await JSZip.loadAsync(src)}catch(e){note.textContent='That is not a valid backup file.';return}}
   var g={};
   Object.values(zip.files).forEach(function(e){
     if(e.dir||!/\.(jpe?g|png|gif|webp|bmp|avif|heic)$/i.test(e.name))return;
@@ -297,7 +422,8 @@ async function pickDir(){
 }
 async function importZip(file){
   if(!window.JSZip)throw new Error('ZIP tool did not load, check your connection');
-  var zip;try{zip=await JSZip.loadAsync(file)}catch(e){throw new Error('not a valid ZIP')}
+  var zip=await readStore(file);
+  if(!zip){try{zip=await JSZip.loadAsync(file)}catch(e){throw new Error('not a valid ZIP')}}
   var ents=Object.values(zip.files).filter(function(f){return !f.dir&&/\.(jpe?g|png|gif|webp|bmp|avif)$/i.test(f.name)&&!/__MACOSX|(^|\/)\./.test(f.name)});
   if(!ents.length)throw new Error('no photos found');
   ents.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'})});
@@ -324,7 +450,7 @@ async function showFolder(id){
   cur.imgs=imgs.map(function(x){return mk(x.blob)});
   app.innerHTML='<div class="row"><button class="ghost" id="back">Back</button><button class="ghost" id="del">Delete folder</button></div>'+
     '<h1 style="margin-top:16px">'+esc(f.name)+'</h1><p class="sub">'+imgs.length+' photos, in order</p>'+
-    '<div class="row"><button id="ss">Start slideshow</button></div>'+
+    '<div class="row"><button id="ss">Start slideshow</button><button class="ghost" id="fbk">Back up folder</button></div><div class="msg" id="note"></div>'+
     '<div class="thumbs">'+cur.imgs.map(function(u,i){return '<img loading="lazy" decoding="async" data-i="'+i+'" src="'+u+'" alt="Photo '+(i+1)+'">'}).join('')+'</div>';
   $('#back').onclick=function(){showLibrary()};
   $('#del').onclick=async function(){
@@ -335,6 +461,7 @@ async function showFolder(id){
     await new Promise(function(r){t.oncomplete=r});showLibrary('Folder deleted.');
   };
   $('#ss').onclick=function(){openViewer(0,true)};
+  $('#fbk').onclick=function(){backup(id)};
   app.querySelectorAll('.thumbs img').forEach(function(im){im.onclick=function(){openViewer(+im.dataset.i,false)}});
 }
 
