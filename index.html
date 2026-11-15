@@ -443,18 +443,16 @@ async function backupRun(only){
     await saveStep(note,blob,nm,p+1,parts.length);
     blob=null;
   }
-  note.textContent='Backup finished: '+parts.length+' file'+(parts.length>1?'s':'')+' saved to your phone.';
+  note.textContent='Backup finished: '+parts.length+' file'+(parts.length>1?'s':'')+' saved to your Downloads folder. If a file is missing, tap Allow on the downloads prompt and run the backup again.';
 }
 function saveStep(note,blob,nm,k,n){
   return new Promise(function(res){
-    note.innerHTML='File '+k+' of '+n+' is ready ('+Math.round(blob.size/1048576)+' MB). <button id="sv">Save to phone</button>';
-    $('#sv').onclick=async function(){
-      var btn=this;btn.disabled=true;var ok=false;
-      var file=new File([blob],nm,{type:blob.type});
-      try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nm});ok=true}}catch(e){if(e.name==='AbortError'){btn.disabled=false;return}}
-      if(!ok){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove()}
-      res();
-    };
+    note.textContent='Saving file '+k+' of '+n+' ('+Math.round(blob.size/1048576)+' MB) to your phone…';
+    var u=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=u;a.download=nm;a.style.display='none';document.body.appendChild(a);a.click();
+    setTimeout(function(){a.remove()},1000);
+    setTimeout(function(){URL.revokeObjectURL(u)},60000);
+    setTimeout(res,2500);
   });
 }
 async function backupFast(only){
@@ -518,17 +516,37 @@ async function backupOld(only){
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nm;document.body.appendChild(a);a.click();a.remove();
   };
 }
-async function restore(){var fs=Array.from(this.files);this.value='';for(var i=0;i<fs.length;i++){await restoreFrom(fs[i])}}
-async function restoreFrom(f){
+var restPw=null,restStop=false;
+async function openEnc(f,tag){
+  for(var tries=0;;tries++){
+    var pw=restPw;
+    if(pw===null){pw=prompt(tries?'Wrong password, try again':'Backup password (asked once for all files)');if(pw===null)return null}
+    try{var out=tag==='MSR2'?await decBlob(f,pw):new Blob([await decBuf(await f.arrayBuffer(),pw)]);restPw=pw;return out}
+    catch(e){restPw=null;if(tries>=2)throw e}
+  }
+}
+async function restore(){
+  var fs=Array.from(this.files);this.value='';restPw=null;restStop=false;
+  var tot=0,bad=0;
+  for(var i=0;i<fs.length;i++){
+    if(restStop)break;
+    var r=await restoreFrom(fs[i],fs.length>1);
+    if(r)tot+=r;else bad++;
+  }
+  restPw=null;
+  if(fs.length>1)showLibrary(tot+' folder'+(tot===1?'':'s')+' restored from '+(fs.length-bad)+' of '+fs.length+' files.'+(restStop?' Stopped at your request.':''));
+}
+async function restoreFrom(f,batch){
   var note=$('#note');$('#menu').hidden=true;note.textContent='Reading backup…';
   var src=f;
   try{
     var head=new Uint8Array(await f.slice(0,4).arrayBuffer());
     var tag=String.fromCharCode.apply(null,head);
     if(tag==='MSRB'||tag==='MSR2'){
-      var pw=prompt('Backup password');if(pw===null){note.textContent='';return}
       if(!(window.crypto&&crypto.subtle)){note.textContent='Opening a protected backup needs a secure (https) page.';return}
-      note.textContent='Decrypting…';src=tag==='MSR2'?await decBlob(f,pw):new Blob([await decBuf(await f.arrayBuffer(),pw)]);
+      note.textContent='Decrypting…';
+      src=await openEnc(f,tag);
+      if(src===null){restStop=true;note.textContent='';return}
     }
   }catch(e){note.textContent='Wrong password or damaged file.';return}
   var zip=await readStore(src);
@@ -548,7 +566,9 @@ async function restoreFrom(f){
     }
     try{await saveFiles(keys[k],files)}catch(er){}
   }
+  if(batch)return keys.length;
   showLibrary(keys.length+' folder'+(keys.length>1?'s':'')+' restored.');
+  return keys.length;
 }
 var GS='https://www.googleapis.com/auth/drive.file',gtok=null,gexp=0;
 function cid(){try{return localStorage.getItem('msr_cid')||''}catch(e){return ''}}
